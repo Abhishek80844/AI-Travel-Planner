@@ -65,7 +65,7 @@ export const AiChatDrawer: React.FC<AiChatDrawerProps> = ({ tripId, destination 
       {/* Trigger Button */}
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 z-40 p-4 rounded-2xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-bold shadow-2xl shadow-sky-500/40 transition-all hover:scale-110 active:scale-95 flex items-center space-x-2 border border-sky-400/30"
+        className="fixed bottom-6 right-6 z-[100] p-4 rounded-2xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-bold shadow-2xl shadow-sky-500/40 transition-all hover:scale-110 active:scale-95 flex items-center space-x-2 border border-sky-400/30 cursor-pointer pointer-events-auto"
       >
         <Sparkles className="w-5 h-5 text-white animate-pulse" />
         <span className="hidden sm:inline">Gemini AI Assistant</span>
@@ -78,7 +78,7 @@ export const AiChatDrawer: React.FC<AiChatDrawerProps> = ({ tripId, destination 
             initial={{ opacity: 0, x: 300 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 300 }}
-            className="fixed bottom-6 right-6 z-50 w-[90vw] sm:w-[420px] h-[580px] glass-panel rounded-3xl border border-slate-800 shadow-2xl flex flex-col overflow-hidden"
+            className="fixed bottom-6 right-6 z-[100] w-[90vw] sm:w-[420px] h-[580px] glass-panel rounded-3xl border border-slate-800 shadow-2xl flex flex-col overflow-hidden"
           >
             {/* Header */}
             <div className="p-4 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between">

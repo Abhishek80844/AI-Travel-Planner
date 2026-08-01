@@ -37,6 +37,9 @@ public class AuthController {
     @GetMapping("/me")
     @Operation(summary = "Get Current User Profile", description = "Returns profile of authenticated user.")
     public ResponseEntity<UserResponse> getCurrentUser(@AuthenticationPrincipal UserPrincipal currentUser) {
+        if (currentUser == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
         UserResponse user = authService.getCurrentUser(currentUser);
         return ResponseEntity.ok(user);
     }

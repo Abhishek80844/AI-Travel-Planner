@@ -48,6 +48,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/v1/auth/**").permitAll()
                 .requestMatchers("/api/maps/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/trips/share/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/v1/trips/advice").permitAll()
                 .requestMatchers("/h2-console/**").permitAll()
                 .requestMatchers(
                     "/v3/api-docs/**",
