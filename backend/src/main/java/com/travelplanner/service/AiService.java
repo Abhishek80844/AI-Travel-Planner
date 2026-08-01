@@ -227,13 +227,31 @@ public class AiService {
         String url = String.format("https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s",
                 StringUtils.hasText(geminiModel) ? geminiModel : "gemini-1.5-flash", geminiApiKey);
 
-        String contextPrompt = String.format(
-                "You are an intelligent, friendly AI travel assistant. Current Trip Context: Destination: %s, Days: %d, Budget: $%s, Travel Style: %s, Travelers: %d.\n" +
-                "User question: %s\nProvide a helpful, concise response.",
-                trip.getDestination(), trip.getDays(), trip.getBudget(), trip.getTravelStyle(), trip.getTravelers(), userMessage
-        );
+        String prompt = """
+                You are an expert AI Travel Planner.
 
-        Map<String, Object> part = Map.of("text", contextPrompt);
+                Your job is to help users with:
+                - Tourist attractions
+                - Historical information
+                - Nearby places
+                - Hotels
+                - Restaurants
+                - Weather
+                - Local food
+                - Travel routes
+                - Budget planning
+                - Safety tips
+                - Travel itinerary
+
+                Current Trip Context: Destination: %s, Days: %d, Budget: $%s, Travel Style: %s, Travelers: %d.
+
+                Always provide accurate, up-to-date, concise, and helpful travel information.
+                If the question is not related to travel or tourism, politely respond that you only assist with travel-related queries.
+
+                User Question:
+                """.formatted(trip.getDestination(), trip.getDays(), trip.getBudget(), trip.getTravelStyle(), trip.getTravelers()) + userMessage;
+
+        Map<String, Object> part = Map.of("text", prompt);
         Map<String, Object> content = Map.of("parts", List.of(part));
         Map<String, Object> body = Map.of("contents", List.of(content));
 
@@ -258,17 +276,34 @@ public class AiService {
         return generateLocalChatReply(trip, userMessage);
     }
 
-    private String callGeminiStandaloneAdvice(String query) throws Exception {
+    private String callGeminiStandaloneAdvice(String userMessage) throws Exception {
         String modelName = StringUtils.hasText(geminiModel) ? geminiModel : "gemini-1.5-flash";
         String url = String.format("https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s",
                 modelName, geminiApiKey);
 
-        String advicePrompt = String.format(
-                "You are an expert AI Travel Advisor. Provide helpful, insightful, concise, and structured travel advice for the following user request:\n\n%s",
-                query
-        );
+        String prompt = """
+                You are an expert AI Travel Planner.
 
-        Map<String, Object> part = Map.of("text", advicePrompt);
+                Your job is to help users with:
+                - Tourist attractions
+                - Historical information
+                - Nearby places
+                - Hotels
+                - Restaurants
+                - Weather
+                - Local food
+                - Travel routes
+                - Budget planning
+                - Safety tips
+                - Travel itinerary
+
+                Always provide accurate, up-to-date, concise, and helpful travel information.
+                If the question is not related to travel or tourism, politely respond that you only assist with travel-related queries.
+
+                User Question:
+                """ + userMessage;
+
+        Map<String, Object> part = Map.of("text", prompt);
         Map<String, Object> content = Map.of("parts", List.of(part));
         Map<String, Object> body = Map.of("contents", List.of(content));
 
