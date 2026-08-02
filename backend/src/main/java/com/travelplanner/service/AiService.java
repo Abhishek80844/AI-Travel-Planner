@@ -1,6 +1,7 @@
 package com.travelplanner.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.travelplanner.service.ai.prompt.PromptService;
 import com.travelplanner.dto.AiTripResponse;
 import com.travelplanner.dto.CreateTripRequest;
 import com.travelplanner.dto.TripResponse;
@@ -32,6 +33,7 @@ public class AiService {
     private String geminiModel;
 
     private final ObjectMapper objectMapper;
+    private final PromptService promptService;
     private final RestTemplate restTemplate = new RestTemplate();
 
     /**
@@ -124,7 +126,7 @@ public class AiService {
     private AiTripResponse callOpenAiApi(CreateTripRequest request) throws Exception {
         String url = "https://api.openai.com/v1/chat/completions";
 
-        String prompt = buildPromptText(request);
+        String prompt = promptService.buildTripPrompt(request);
 
         Map<String, Object> body = new HashMap<>();
         body.put("model", openAiModel);
@@ -157,7 +159,8 @@ public class AiService {
         String url = String.format("https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s",
                 StringUtils.hasText(geminiModel) ? geminiModel : "gemini-1.5-flash", geminiApiKey);
 
-        String prompt = "You are an expert AI Travel Planner. " + buildPromptText(request);
+        String prompt = "You are an expert AI Travel Planner. "
+                + promptService.buildTripPrompt(request);
 
         Map<String, Object> part = Map.of("text", prompt);
         Map<String, Object> content = Map.of("parts", List.of(part));
