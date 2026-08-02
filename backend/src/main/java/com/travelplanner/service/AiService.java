@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.travelplanner.service.ai.fallback.FallbackAiService;
 import com.travelplanner.service.ai.parser.JsonResponseParser;
 import com.travelplanner.service.ai.prompt.PromptService;
+import com.travelplanner.service.ai.provider.GeminiService;
 import com.travelplanner.dto.AiTripResponse;
 import com.travelplanner.dto.CreateTripRequest;
 import com.travelplanner.dto.TripResponse;
@@ -38,6 +39,7 @@ public class AiService {
     private final PromptService promptService;
     private final JsonResponseParser jsonResponseParser;
     private final FallbackAiService fallbackAiService;
+    private final GeminiService geminiService;
     private final RestTemplate restTemplate = new RestTemplate();
 
     /**
@@ -48,12 +50,12 @@ public class AiService {
         int maxRetries = 2;
 
         // 1. Try Gemini if configured (Primary AI Engine)
-        if (StringUtils.hasText(geminiApiKey)) {
+        if (geminiService.isConfigured()) {
             int attempts = 0;
             while (attempts <= maxRetries) {
                 try {
-                    log.info("Calling Google Gemini API ({}) Attempt {}...", geminiModel, attempts + 1);
-                    return callGeminiApi(request);
+                    log.info("Calling Google Gemini API (Attempt {})...", attempts + 1);
+                    return geminiService.generateTrip(request);
                 } catch (Exception ex) {
                     log.warn("Gemini API call attempt {} failed: {}", attempts + 1, ex.getMessage());
                     attempts++;
@@ -84,10 +86,10 @@ public class AiService {
      * Answers user's questions grounded in the current trip's context using Google Gemini API.
      */
     public String chatAboutTrip(TripResponse trip, String userMessage) {
-        if (StringUtils.hasText(geminiApiKey)) {
+        if (geminiService.isConfigured()) {
             try {
-                log.info("Generating travel advice via Google Gemini API ({})", geminiModel);
-                return callGeminiChat(trip, userMessage);
+                log.info("Generating travel advice via Google Gemini API");
+                return geminiService.chat(trip, userMessage);
             } catch (Exception e) {
                 log.warn("Gemini chat failed, trying OpenAI or falling back to local assistant", e);
             }
@@ -108,9 +110,9 @@ public class AiService {
      * Provides standalone AI travel advice and tips powered by Google Gemini API.
      */
     public String getGeneralTravelAdvice(String query) {
-        if (StringUtils.hasText(geminiApiKey)) {
+        if (geminiService.isConfigured()) {
             try {
-                return callGeminiStandaloneAdvice(query);
+                return geminiService.travelAdvice(query);
             } catch (Exception e) {
                 log.warn("Google Gemini standalone travel advice failed: {}", e.getMessage());
             }
@@ -159,43 +161,7 @@ public class AiService {
         throw new RuntimeException("Empty or invalid response from OpenAI");
     }
 
-    private AiTripResponse callGeminiApi(CreateTripRequest request) throws Exception {
-        String url = String.format("https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s",
-                StringUtils.hasText(geminiModel) ? geminiModel : "gemini-1.5-flash", geminiApiKey);
 
-        String prompt = "You are an expert AI Travel Planner. "
-                + promptService.buildTripPrompt(request);
-
-        Map<String, Object> part = Map.of("text", prompt);
-        Map<String, Object> content = Map.of("parts", List.of(part));
-        Map<String, Object> generationConfig = Map.of("response_mime_type", "application/json");
-
-        Map<String, Object> body = Map.of(
-                "contents", List.of(content),
-                "generationConfig", generationConfig
-        );
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
-        ResponseEntity<Map> response = restTemplate.postForEntity(url, entity, Map.class);
-
-        if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-            List<Map<String, Object>> candidates = (List<Map<String, Object>>) response.getBody().get("candidates");
-            if (candidates != null && !candidates.isEmpty()) {
-                Map<String, Object> candidateContent = (Map<String, Object>) candidates.get(0).get("content");
-                if (candidateContent != null) {
-                    List<Map<String, Object>> parts = (List<Map<String, Object>>) candidateContent.get("parts");
-                    if (parts != null && !parts.isEmpty()) {
-                        String jsonText = (String) parts.get(0).get("text");
-                        return objectMapper.readValue(jsonResponseParser.cleanJsonText(jsonText), AiTripResponse.class);
-                    }
-                }
-            }
-        }
-        throw new RuntimeException("Empty or invalid response from Gemini API");
-    }
 
     private String callOpenAiChat(TripResponse trip, String userMessage) {
         String url = "https://api.openai.com/v1/chat/completions";
@@ -230,110 +196,7 @@ public class AiService {
         return fallbackAiService.generateLocalChatReply(trip, userMessage);
     }
 
-    private String callGeminiChat(TripResponse trip, String userMessage) {
-        String url = String.format("https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s",
-                StringUtils.hasText(geminiModel) ? geminiModel : "gemini-1.5-flash", geminiApiKey);
 
-        String prompt = """
-                You are an expert AI Travel Planner.
-
-                Your job is to help users with:
-                - Tourist attractions
-                - Historical information
-                - Nearby places
-                - Hotels
-                - Restaurants
-                - Weather
-                - Local food
-                - Travel routes
-                - Budget planning
-                - Safety tips
-                - Travel itinerary
-
-                Current Trip Context: Destination: %s, Days: %d, Budget: $%s, Travel Style: %s, Travelers: %d.
-
-                Always provide accurate, up-to-date, concise, and helpful travel information.
-                If the question is not related to travel or tourism, politely respond that you only assist with travel-related queries.
-
-                User Question:
-                """.formatted(trip.getDestination(), trip.getDays(), trip.getBudget(), trip.getTravelStyle(), trip.getTravelers()) + userMessage;
-
-        Map<String, Object> part = Map.of("text", prompt);
-        Map<String, Object> content = Map.of("parts", List.of(part));
-        Map<String, Object> body = Map.of("contents", List.of(content));
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
-        ResponseEntity<Map> response = restTemplate.postForEntity(url, entity, Map.class);
-
-        if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-            List<Map<String, Object>> candidates = (List<Map<String, Object>>) response.getBody().get("candidates");
-            if (candidates != null && !candidates.isEmpty()) {
-                Map<String, Object> candidateContent = (Map<String, Object>) candidates.get(0).get("content");
-                if (candidateContent != null) {
-                    List<Map<String, Object>> parts = (List<Map<String, Object>>) candidateContent.get("parts");
-                    if (parts != null && !parts.isEmpty()) {
-                        return (String) parts.get(0).get("text");
-                    }
-                }
-            }
-        }
-        return fallbackAiService.generateLocalChatReply(trip, userMessage);
-    }
-
-    private String callGeminiStandaloneAdvice(String userMessage) throws Exception {
-        String modelName = StringUtils.hasText(geminiModel) ? geminiModel : "gemini-1.5-flash";
-        String url = String.format("https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s",
-                modelName, geminiApiKey);
-
-        String prompt = """
-                You are an expert AI Travel Planner.
-
-                Your job is to help users with:
-                - Tourist attractions
-                - Historical information
-                - Nearby places
-                - Hotels
-                - Restaurants
-                - Weather
-                - Local food
-                - Travel routes
-                - Budget planning
-                - Safety tips
-                - Travel itinerary
-
-                Always provide accurate, up-to-date, concise, and helpful travel information.
-                If the question is not related to travel or tourism, politely respond that you only assist with travel-related queries.
-
-                User Question:
-                """ + userMessage;
-
-        Map<String, Object> part = Map.of("text", prompt);
-        Map<String, Object> content = Map.of("parts", List.of(part));
-        Map<String, Object> body = Map.of("contents", List.of(content));
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
-        ResponseEntity<Map> response = restTemplate.postForEntity(url, entity, Map.class);
-
-        if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-            List<Map<String, Object>> candidates = (List<Map<String, Object>>) response.getBody().get("candidates");
-            if (candidates != null && !candidates.isEmpty()) {
-                Map<String, Object> candidateContent = (Map<String, Object>) candidates.get(0).get("content");
-                if (candidateContent != null) {
-                    List<Map<String, Object>> parts = (List<Map<String, Object>>) candidateContent.get("parts");
-                    if (parts != null && !parts.isEmpty()) {
-                        return (String) parts.get(0).get("text");
-                    }
-                }
-            }
-        }
-        throw new RuntimeException("Empty response from Google Gemini API for travel advice");
-    }
 
     private String callOpenAiStandaloneAdvice(String query) throws Exception {
         String url = "https://api.openai.com/v1/chat/completions";
