@@ -1,6 +1,7 @@
 package com.travelplanner.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.travelplanner.service.ai.parser.JsonResponseParser;
 import com.travelplanner.service.ai.prompt.PromptService;
 import com.travelplanner.dto.AiTripResponse;
 import com.travelplanner.dto.CreateTripRequest;
@@ -34,6 +35,7 @@ public class AiService {
 
     private final ObjectMapper objectMapper;
     private final PromptService promptService;
+    private final JsonResponseParser jsonResponseParser;
     private final RestTemplate restTemplate = new RestTemplate();
 
     /**
@@ -149,7 +151,7 @@ public class AiService {
             if (choices != null && !choices.isEmpty()) {
                 Map<String, Object> message = (Map<String, Object>) choices.get(0).get("message");
                 String content = (String) message.get("content");
-                return objectMapper.readValue(cleanJsonText(content), AiTripResponse.class);
+                return objectMapper.readValue(jsonResponseParser.cleanJsonText(content), AiTripResponse.class);
             }
         }
         throw new RuntimeException("Empty or invalid response from OpenAI");
@@ -185,7 +187,7 @@ public class AiService {
                     List<Map<String, Object>> parts = (List<Map<String, Object>>) candidateContent.get("parts");
                     if (parts != null && !parts.isEmpty()) {
                         String jsonText = (String) parts.get(0).get("text");
-                        return objectMapper.readValue(cleanJsonText(jsonText), AiTripResponse.class);
+                        return objectMapper.readValue(jsonResponseParser.cleanJsonText(jsonText), AiTripResponse.class);
                     }
                 }
             }
