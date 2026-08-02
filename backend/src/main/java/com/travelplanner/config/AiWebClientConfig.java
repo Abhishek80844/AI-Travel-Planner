@@ -8,12 +8,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 public class AiWebClientConfig {
 
     @Bean
-    public WebClient.Builder webClientBuilder() {
-        return WebClient.builder();
-    }
-
-    @Bean
-    public WebClient webClient(WebClient.Builder builder) {
-        return builder.build();
+    public WebClient aiWebClient() {
+        return WebClient.builder().build();
     }
 }

@@ -20,7 +20,7 @@ import java.util.Map;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class GeminiService {
+public class GeminiService implements AiProvider {
 
     @Value("${integrations.gemini.api-key:}")
     private String geminiApiKey;
@@ -37,6 +37,7 @@ public class GeminiService {
         return StringUtils.hasText(geminiApiKey);
     }
 
+    @Override
     public AiTripResponse generateTrip(CreateTripRequest request) throws Exception {
         String url = String.format("https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s",
                 StringUtils.hasText(geminiModel) ? geminiModel : "gemini-1.5-flash", geminiApiKey);
@@ -77,6 +78,7 @@ public class GeminiService {
         throw new RuntimeException("Empty or invalid response from Gemini API");
     }
 
+    @Override
     public String chat(TripResponse trip, String userMessage) {
         String url = String.format("https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s",
                 StringUtils.hasText(geminiModel) ? geminiModel : "gemini-1.5-flash", geminiApiKey);
@@ -130,6 +132,11 @@ public class GeminiService {
             }
         }
         throw new RuntimeException("Empty or invalid chat response from Gemini API");
+    }
+
+    @Override
+    public String generalAdvice(String query) throws Exception {
+        return travelAdvice(query);
     }
 
     public String travelAdvice(String userMessage) throws Exception {

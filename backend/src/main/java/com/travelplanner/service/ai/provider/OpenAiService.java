@@ -22,7 +22,7 @@ import java.util.Map;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class OpenAiService {
+public class OpenAiService implements AiProvider {
 
     @Value("${integrations.openai.api-key:}")
     private String openAiApiKey;
@@ -39,6 +39,7 @@ public class OpenAiService {
         return StringUtils.hasText(openAiApiKey);
     }
 
+    @Override
     public AiTripResponse generateTrip(CreateTripRequest request) throws Exception {
         String url = "https://api.openai.com/v1/chat/completions";
         String prompt = promptService.buildTripPrompt(request);
@@ -72,6 +73,7 @@ public class OpenAiService {
         throw new RuntimeException("Empty or invalid response from OpenAI");
     }
 
+    @Override
     public String chat(TripResponse trip, String userMessage) {
         String url = "https://api.openai.com/v1/chat/completions";
 
@@ -105,6 +107,11 @@ public class OpenAiService {
             }
         }
         throw new RuntimeException("Empty response from OpenAI chat");
+    }
+
+    @Override
+    public String generalAdvice(String query) throws Exception {
+        return travelAdvice(query);
     }
 
     public String travelAdvice(String query) throws Exception {
