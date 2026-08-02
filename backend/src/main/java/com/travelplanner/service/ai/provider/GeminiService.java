@@ -9,13 +9,10 @@ import com.travelplanner.service.ai.prompt.PromptService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.reactive.function.client.WebClient;
 
 import java.util.List;
 import java.util.Map;
@@ -34,7 +31,7 @@ public class GeminiService {
     private final ObjectMapper objectMapper;
     private final PromptService promptService;
     private final JsonResponseParser jsonResponseParser;
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final WebClient webClient;
 
     public boolean isConfigured() {
         return StringUtils.hasText(geminiApiKey);
@@ -56,14 +53,16 @@ public class GeminiService {
                 "generationConfig", generationConfig
         );
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
+        Map responseBody = webClient.post()
+                .uri(url)
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(body)
+                .retrieve()
+                .bodyToMono(Map.class)
+                .block();
 
-        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
-        ResponseEntity<Map> response = restTemplate.postForEntity(url, entity, Map.class);
-
-        if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-            List<Map<String, Object>> candidates = (List<Map<String, Object>>) response.getBody().get("candidates");
+        if (responseBody != null) {
+            List<Map<String, Object>> candidates = (List<Map<String, Object>>) responseBody.get("candidates");
             if (candidates != null && !candidates.isEmpty()) {
                 Map<String, Object> candidateContent = (Map<String, Object>) candidates.get(0).get("content");
                 if (candidateContent != null) {
@@ -110,14 +109,16 @@ public class GeminiService {
         Map<String, Object> content = Map.of("parts", List.of(part));
         Map<String, Object> body = Map.of("contents", List.of(content));
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
+        Map responseBody = webClient.post()
+                .uri(url)
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(body)
+                .retrieve()
+                .bodyToMono(Map.class)
+                .block();
 
-        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
-        ResponseEntity<Map> response = restTemplate.postForEntity(url, entity, Map.class);
-
-        if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-            List<Map<String, Object>> candidates = (List<Map<String, Object>>) response.getBody().get("candidates");
+        if (responseBody != null) {
+            List<Map<String, Object>> candidates = (List<Map<String, Object>>) responseBody.get("candidates");
             if (candidates != null && !candidates.isEmpty()) {
                 Map<String, Object> candidateContent = (Map<String, Object>) candidates.get(0).get("content");
                 if (candidateContent != null) {
@@ -162,14 +163,16 @@ public class GeminiService {
         Map<String, Object> content = Map.of("parts", List.of(part));
         Map<String, Object> body = Map.of("contents", List.of(content));
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
+        Map responseBody = webClient.post()
+                .uri(url)
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(body)
+                .retrieve()
+                .bodyToMono(Map.class)
+                .block();
 
-        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
-        ResponseEntity<Map> response = restTemplate.postForEntity(url, entity, Map.class);
-
-        if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-            List<Map<String, Object>> candidates = (List<Map<String, Object>>) response.getBody().get("candidates");
+        if (responseBody != null) {
+            List<Map<String, Object>> candidates = (List<Map<String, Object>>) responseBody.get("candidates");
             if (candidates != null && !candidates.isEmpty()) {
                 Map<String, Object> candidateContent = (Map<String, Object>) candidates.get(0).get("content");
                 if (candidateContent != null) {
